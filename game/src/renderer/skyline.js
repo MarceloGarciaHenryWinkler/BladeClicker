@@ -13,10 +13,10 @@ function rngRange(min, max) { return min + rng() * (max - min); }
 
 // --- Parallax layers (back to front) ---
 const LAYER_CONFIGS = [
-  { depth: 0.05, count: 20, hMin: 0.15, hMax: 0.35, baseY: 0.65, tint: [0.08, 0.06, 0.18], winChance: 0.15 },
-  { depth: 0.15, count: 16, hMin: 0.18, hMax: 0.45, baseY: 0.68, tint: [0.10, 0.08, 0.25], winChance: 0.25 },
-  { depth: 0.35, count: 12, hMin: 0.15, hMax: 0.50, baseY: 0.72, tint: [0.14, 0.10, 0.32], winChance: 0.40 },
-  { depth: 1.00, count: 10, hMin: 0.10, hMax: 0.45, baseY: 0.75, tint: [0.18, 0.13, 0.40], winChance: 0.55 },
+  { depth: 0.05, count: 20, hMin: 0.15, hMax: 0.35, baseY: 0.65, tint: [0.12, 0.10, 0.28], winChance: 0.18 },
+  { depth: 0.15, count: 16, hMin: 0.18, hMax: 0.45, baseY: 0.68, tint: [0.16, 0.13, 0.35], winChance: 0.30 },
+  { depth: 0.35, count: 12, hMin: 0.15, hMax: 0.50, baseY: 0.72, tint: [0.22, 0.17, 0.45], winChance: 0.45 },
+  { depth: 1.00, count: 10, hMin: 0.10, hMax: 0.45, baseY: 0.75, tint: [0.28, 0.22, 0.55], winChance: 0.60 },
 ];
 
 // Pre-generated building data per layer
@@ -96,10 +96,10 @@ function rebuildPurchasedBuildings() {
     const def = BUILDINGS[id];
     if (count === 0) continue;
 
-    // Each building type gets a size tier
+    // Each building type gets a size tier — taller tiers are bigger
     const tierIdx = BUILDING_ORDER.indexOf(id);
-    const baseH = 0.08 + tierIdx * 0.05;
-    const baseW = 0.04 + tierIdx * 0.008;
+    const baseH = 0.12 + tierIdx * 0.06;
+    const baseW = 0.05 + tierIdx * 0.01;
 
     for (let i = 0; i < count; i++) {
       const relW = baseW + rngRange(-0.01, 0.015);
@@ -170,18 +170,27 @@ export function renderSkyline(time, dt) {
     pushQuad(-hw, cfg.baseY * h, w, 2, tR * 0.8, tG * 0.8, tB * 1.2, 0.5);
   }
 
-  // Player-purchased buildings (foreground, brighter)
+  // Player-purchased buildings (foreground, bright and prominent)
   rebuildPurchasedBuildings();
   if (purchasedBuildingCache.length > 0) {
     const baseY = 0.75;
     for (let i = 0; i < purchasedBuildingCache.length; i++) {
       const b = purchasedBuildingCache[i];
-      // Brighter tint for purchased buildings, color by tier
       const tierT = b.tierIdx / 7;
-      const tR = 0.15 + tierT * 0.10;
-      const tG = 0.10 + tierT * 0.05;
-      const tB = 0.35 + tierT * 0.15;
+      // Much brighter — these are the player's buildings, they should POP
+      const tR = 0.25 + tierT * 0.15;
+      const tG = 0.18 + tierT * 0.10;
+      const tB = 0.50 + tierT * 0.20;
       renderBuilding(b, baseY, tR, tG, tB, 1.0, time, w, h, hw);
+
+      // Extra glow bar at base for purchased buildings
+      const bx = -hw + b.x * w;
+      const bw = b.relW * w;
+      const glowR = b.neonHue < 0.33 ? 0.8 : (b.neonHue < 0.66 ? 0.0 : 0.9);
+      const glowG = b.neonHue < 0.33 ? 0.0 : (b.neonHue < 0.66 ? 0.8 : 0.0);
+      const glowB = b.neonHue < 0.33 ? 0.9 : (b.neonHue < 0.66 ? 0.7 : 0.7);
+      const glowA = 0.25 + Math.sin(time * 1.2 + i * 1.7) * 0.1;
+      pushQuad(bx - 2, baseY * h - 3, bw + 4, 6, glowR, glowG, glowB, glowA);
     }
   }
 
@@ -212,8 +221,8 @@ function renderBuilding(b, baseY, tR, tG, tB, fogMul, time, w, h, hw) {
   pushQuad(bx, by, edgeW, bh, 0.02, 0.02, 0.05, 0.7);
   pushQuad(bx + bw - edgeW, by, edgeW, bh, 0.02, 0.02, 0.05, 0.7);
 
-  // Rooftop highlight
-  pushQuad(bx, by, bw, 2, tR * 2.0, tG * 2.0, tB * 2.5, 0.7);
+  // Rooftop highlight (bright neon edge)
+  pushQuad(bx, by, bw, 3, tR * 3.0, tG * 3.0, tB * 3.5, 0.8);
 
   // Antenna
   if (b.hasAntenna) {
@@ -234,13 +243,14 @@ function renderBuilding(b, baseY, tR, tG, tB, fogMul, time, w, h, hw) {
     pushQuad(tx, by - th, tw, th, tR * 0.9, tG * 0.9, tB * 1.3, 1.0);
   }
 
-  // Neon accent strip
-  const neonAlpha = 0.35 + Math.sin(time * 0.8 + b.neonHue * 10) * 0.15;
-  const neonX = b.neonSide === 'left' ? bx : bx + bw - 3;
-  const nr = b.neonHue < 0.33 ? 0.9 : (b.neonHue < 0.66 ? 0.0 : 1.0);
-  const ng = b.neonHue < 0.33 ? 0.0 : (b.neonHue < 0.66 ? 1.0 : 0.0);
+  // Neon accent strip (wide, bright)
+  const neonAlpha = 0.5 + Math.sin(time * 0.8 + b.neonHue * 10) * 0.2;
+  const neonW = Math.max(4, bw * 0.06);
+  const neonX = b.neonSide === 'left' ? bx : bx + bw - neonW;
+  const nr = b.neonHue < 0.33 ? 1.0 : (b.neonHue < 0.66 ? 0.0 : 1.0);
+  const ng = b.neonHue < 0.33 ? 0.0 : (b.neonHue < 0.66 ? 1.0 : 0.1);
   const nb = b.neonHue < 0.33 ? 1.0 : (b.neonHue < 0.66 ? 0.9 : 0.8);
-  pushQuad(neonX, by + bh * 0.05, 3, bh * 0.9, nr, ng, nb, neonAlpha);
+  pushQuad(neonX, by + bh * 0.03, neonW, bh * 0.94, nr, ng, nb, neonAlpha);
 
   // Windows
   renderWindows(b, bx, by, bw, bh, time, fogMul);
@@ -248,8 +258,8 @@ function renderBuilding(b, baseY, tR, tG, tB, fogMul, time, w, h, hw) {
 
 function renderWindows(b, bx, by, bw, bh, time, fogMul) {
   const wins = b.windows;
-  const winW = Math.max(3, bw * 0.08);
-  const winH = Math.max(3, bh * 0.02);
+  const winW = Math.max(4, bw * 0.09);
+  const winH = Math.max(4, bh * 0.025);
   const padX = bw * 0.10;
   const padY = bh * 0.06;
   const innerW = bw - padX * 2;
