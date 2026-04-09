@@ -179,25 +179,25 @@ function renderPurchasedBuildings(time, w, h, hw) {
     const bx = -hw + b.x * w;
     const by = groundY - bh; // building rises up from ground
 
-    // Building body — dark but clearly distinct from background
-    const bodyR = tc.r * 0.25 + 0.08;
-    const bodyG = tc.g * 0.25 + 0.06;
-    const bodyB = tc.b * 0.25 + 0.15;
+    // Building body — vivid, clearly visible against dark background
+    const bodyR = tc.r * 0.5 + 0.15;
+    const bodyG = tc.g * 0.5 + 0.12;
+    const bodyB = tc.b * 0.5 + 0.18;
     pushQuad(bx, by, bw, bh, bodyR, bodyG, bodyB, 1.0);
 
-    // Left edge highlight
-    pushQuad(bx, by, 2, bh, tc.r * 0.5, tc.g * 0.5, tc.b * 0.5, 0.8);
-    // Right edge highlight
-    pushQuad(bx + bw - 2, by, 2, bh, tc.r * 0.5, tc.g * 0.5, tc.b * 0.5, 0.8);
+    // Left edge — full neon color
+    pushQuad(bx, by, 3, bh, tc.r, tc.g, tc.b, 0.7);
+    // Right edge — full neon color
+    pushQuad(bx + bw - 3, by, 3, bh, tc.r, tc.g, tc.b, 0.7);
 
     // Rooftop — bright neon line
-    pushQuad(bx - 1, by - 2, bw + 2, 4, tc.r, tc.g, tc.b, 0.9);
+    pushQuad(bx - 2, by - 2, bw + 4, 5, tc.r, tc.g, tc.b, 1.0);
 
     // Rooftop glow (wider, faded)
-    pushQuad(bx - 4, by - 5, bw + 8, 6, tc.r, tc.g, tc.b, 0.25);
+    pushQuad(bx - 8, by - 8, bw + 16, 10, tc.r, tc.g, tc.b, 0.3);
 
     // Base glow at ground level
-    pushQuad(bx - 3, groundY - 3, bw + 6, 6, tc.r, tc.g, tc.b, 0.4);
+    pushQuad(bx - 6, groundY - 4, bw + 12, 8, tc.r, tc.g, tc.b, 0.5);
 
     // Antenna with blinking light
     if (b.hasAntenna) {
@@ -233,9 +233,9 @@ function renderPurchasedBuildings(time, w, h, hw) {
     }
 
     // Vertical neon stripe on one side
-    const stripeW = Math.max(3, bw * 0.05);
-    const stripeX = (i % 2 === 0) ? bx + 3 : bx + bw - stripeW - 3;
-    const stripeAlpha = 0.4 + Math.sin(time * 0.6 + i * 2.0) * 0.15;
+    const stripeW = Math.max(4, bw * 0.07);
+    const stripeX = (i % 2 === 0) ? bx + 4 : bx + bw - stripeW - 4;
+    const stripeAlpha = 0.6 + Math.sin(time * 0.6 + i * 2.0) * 0.2;
     pushQuad(stripeX, by + bh * 0.05, stripeW, bh * 0.9, tc.r, tc.g, tc.b, stripeAlpha);
   }
 }
