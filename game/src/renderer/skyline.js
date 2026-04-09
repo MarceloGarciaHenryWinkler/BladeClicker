@@ -13,10 +13,10 @@ function rngRange(min, max) { return min + rng() * (max - min); }
 
 // --- Parallax layers (back to front) ---
 const LAYER_CONFIGS = [
-  { depth: 0.05, count: 20, hMin: 0.15, hMax: 0.35, baseY: 0.65, tint: [0.12, 0.10, 0.28], winChance: 0.18 },
-  { depth: 0.15, count: 16, hMin: 0.18, hMax: 0.45, baseY: 0.68, tint: [0.16, 0.13, 0.35], winChance: 0.30 },
-  { depth: 0.35, count: 12, hMin: 0.15, hMax: 0.50, baseY: 0.72, tint: [0.22, 0.17, 0.45], winChance: 0.45 },
-  { depth: 1.00, count: 10, hMin: 0.10, hMax: 0.45, baseY: 0.75, tint: [0.28, 0.22, 0.55], winChance: 0.60 },
+  { depth: 0.05, count: 20, hMin: 0.15, hMax: 0.35, baseY: 0.65, tint: [0.18, 0.15, 0.38], winChance: 0.18 },
+  { depth: 0.15, count: 16, hMin: 0.18, hMax: 0.45, baseY: 0.68, tint: [0.24, 0.19, 0.48], winChance: 0.30 },
+  { depth: 0.35, count: 12, hMin: 0.15, hMax: 0.50, baseY: 0.72, tint: [0.32, 0.25, 0.58], winChance: 0.45 },
+  { depth: 1.00, count: 10, hMin: 0.10, hMax: 0.45, baseY: 0.75, tint: [0.40, 0.32, 0.68], winChance: 0.60 },
 ];
 
 // Pre-generated building data per layer
@@ -177,10 +177,10 @@ export function renderSkyline(time, dt) {
     for (let i = 0; i < purchasedBuildingCache.length; i++) {
       const b = purchasedBuildingCache[i];
       const tierT = b.tierIdx / 7;
-      // Much brighter — these are the player's buildings, they should POP
-      const tR = 0.25 + tierT * 0.15;
-      const tG = 0.18 + tierT * 0.10;
-      const tB = 0.50 + tierT * 0.20;
+      // Very bright — player's buildings must stand out clearly
+      const tR = 0.55 + tierT * 0.25;
+      const tG = 0.40 + tierT * 0.20;
+      const tB = 0.70 + tierT * 0.25;
       renderBuilding(b, baseY, tR, tG, tB, 1.0, time, w, h, hw);
 
       // Extra glow bar at base for purchased buildings
@@ -189,8 +189,8 @@ export function renderSkyline(time, dt) {
       const glowR = b.neonHue < 0.33 ? 0.8 : (b.neonHue < 0.66 ? 0.0 : 0.9);
       const glowG = b.neonHue < 0.33 ? 0.0 : (b.neonHue < 0.66 ? 0.8 : 0.0);
       const glowB = b.neonHue < 0.33 ? 0.9 : (b.neonHue < 0.66 ? 0.7 : 0.7);
-      const glowA = 0.25 + Math.sin(time * 1.2 + i * 1.7) * 0.1;
-      pushQuad(bx - 2, baseY * h - 3, bw + 4, 6, glowR, glowG, glowB, glowA);
+      const glowA = 0.35 + Math.sin(time * 1.2 + i * 1.7) * 0.15;
+      pushQuad(bx - 3, baseY * h - 4, bw + 6, 8, glowR, glowG, glowB, glowA);
     }
   }
 
@@ -222,7 +222,7 @@ function renderBuilding(b, baseY, tR, tG, tB, fogMul, time, w, h, hw) {
   pushQuad(bx + bw - edgeW, by, edgeW, bh, 0.02, 0.02, 0.05, 0.7);
 
   // Rooftop highlight (bright neon edge)
-  pushQuad(bx, by, bw, 3, tR * 3.0, tG * 3.0, tB * 3.5, 0.8);
+  pushQuad(bx, by, bw, 4, tR * 2.5, tG * 2.5, tB * 3.0, 0.9);
 
   // Antenna
   if (b.hasAntenna) {
