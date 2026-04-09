@@ -152,23 +152,6 @@ export function renderSkyline(time, dt) {
 
   // 5. PURCHASED BUILDINGS — on top of everything
   rebuildPurchasedBuildings();
-
-  // DEBUG: log building count once per second
-  if (Math.floor(time) !== Math.floor(time - (dt || 0.016))) {
-    console.log('[SKYLINE] purchased cache:', purchasedBuildingCache.length, 'w:', w, 'h:', h, 'gy:', gy);
-    if (purchasedBuildingCache.length > 0) {
-      const b0 = purchasedBuildingCache[0];
-      const bx = -hw + b0.x * w;
-      const by = gy - b0.relH * h;
-      console.log('[SKYLINE] building 0: bx=', bx, 'by=', by, 'bw=', b0.relW * w, 'bh=', b0.relH * h);
-    }
-  }
-
-  // DEBUG: if we have purchased buildings, draw a BRIGHT WHITE rectangle as proof
-  if (purchasedBuildingCache.length > 0) {
-    pushQuad(-hw + 10, 10, 150, 40, 1.0, 1.0, 1.0, 1.0); // top-left white bar
-  }
-
   drawPurchasedBuildings(time, w, h, hw, gy);
 
   // 6. Atmospheric haze overlays
