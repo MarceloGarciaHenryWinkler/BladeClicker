@@ -1,6 +1,7 @@
 // main.js — Bootstrap
 import { state } from './state.js';
 import { startLoop } from './gameLoop.js';
+import { doClick, formatNum } from './economy.js';
 
 function update(dt) {
   state.totalTime += dt;
@@ -10,19 +11,19 @@ function update(dt) {
 }
 
 function render(alpha, dt) {
-  // Phase 1: simple HUD to confirm loop works
   const hud = document.getElementById('hud');
-  if (hud) {
-    hud.textContent =
-      `Credits: ${Math.floor(state.credits)} | ` +
-      `Energy: ${Math.floor(state.energy)} | ` +
-      `Data: ${Math.floor(state.data)} | ` +
-      `Time: ${state.totalTime.toFixed(1)}s`;
-  }
+  if (!hud) return;
+
+  let text = `Credits: ${formatNum(state.credits)}`;
+  text += ` (${formatNum(state.creditsPerSec)}/s)`;
+  if (state.energyUnlocked) text += ` | Energy: ${formatNum(state.energy)}`;
+  if (state.dataUnlocked) text += ` | Data: ${formatNum(state.data)}`;
+  text += ` | Clicks: ${state.totalClicks}`;
+  hud.textContent = text;
 }
 
 function onClick() {
-  state.credits += state.creditsPerClick;
+  doClick();
 }
 
 function boot() {
@@ -32,7 +33,6 @@ function boot() {
     return;
   }
 
-  // Temp: click anywhere to earn credits
   canvas.addEventListener('click', onClick);
 
   console.log('BladeClicker booting...');
