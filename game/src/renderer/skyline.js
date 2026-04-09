@@ -3,7 +3,7 @@ import { pushQuad, width, height } from './glInit.js';
 import { state } from '../state.js';
 import { BUILDINGS, BUILDING_ORDER } from '../systems/buildings.js';
 
-// --- Seeded PRNG (deterministic skyline per seed) ---
+// --- Seeded PRNG ---
 let seed = 42;
 function rng() {
   seed = (seed * 16807) % 2147483647;
@@ -11,165 +11,158 @@ function rng() {
 }
 function rngRange(min, max) { return min + rng() * (max - min); }
 
-// --- Parallax layers (back to front) ---
+// Ground line at 88% — gives buildings lots of vertical space
+const GROUND_Y = 0.88;
+
+// Background layers: tall buildings filling most of the screen
 const LAYER_CONFIGS = [
-  { depth: 0.05, count: 20, hMin: 0.08, hMax: 0.20, baseY: 0.65, tint: [0.15, 0.12, 0.30], winChance: 0.15 },
-  { depth: 0.15, count: 16, hMin: 0.10, hMax: 0.28, baseY: 0.68, tint: [0.20, 0.16, 0.38], winChance: 0.25 },
-  { depth: 0.35, count: 12, hMin: 0.10, hMax: 0.32, baseY: 0.72, tint: [0.28, 0.22, 0.50], winChance: 0.35 },
-  { depth: 1.00, count: 10, hMin: 0.08, hMax: 0.28, baseY: 0.75, tint: [0.35, 0.28, 0.60], winChance: 0.50 },
+  { count: 25, hMin: 0.15, hMax: 0.50, baseY: 0.84, tint: [0.10, 0.08, 0.22], winChance: 0.12 },
+  { count: 20, hMin: 0.20, hMax: 0.55, baseY: 0.85, tint: [0.14, 0.11, 0.30], winChance: 0.20 },
+  { count: 15, hMin: 0.15, hMax: 0.50, baseY: 0.86, tint: [0.20, 0.15, 0.40], winChance: 0.35 },
+  { count: 12, hMin: 0.10, hMax: 0.45, baseY: 0.87, tint: [0.28, 0.20, 0.52], winChance: 0.50 },
 ];
 
-// Pre-generated building data per layer
 const layers = [];
 
-// --- Player-purchased buildings ---
+// Purchased building cache
 let purchasedBuildingCache = [];
 let lastBuildingHash = '';
 
-// Neon color palette for each building tier (bright, saturated)
+// Neon color palette per building tier
 const TIER_COLORS = [
-  { r: 0.0, g: 0.9, b: 1.0 },  // neonSign: cyan
-  { r: 0.0, g: 1.0, b: 0.6 },  // dataTerminal: mint green
-  { r: 1.0, g: 0.6, b: 0.0 },  // powerRelay: orange
-  { r: 1.0, g: 0.0, b: 0.8 },  // holoBoard: magenta
-  { r: 0.6, g: 0.0, b: 1.0 },  // synthLab: purple
-  { r: 0.0, g: 0.5, b: 1.0 },  // skyTower: blue
-  { r: 1.0, g: 1.0, b: 0.0 },  // aiCore: yellow
-  { r: 1.0, g: 0.2, b: 0.2 },  // orbitalLink: red
+  { r: 0.0, g: 0.9, b: 1.0 },   // neonSign: cyan
+  { r: 0.0, g: 1.0, b: 0.5 },   // dataTerminal: green
+  { r: 1.0, g: 0.5, b: 0.0 },   // powerRelay: orange
+  { r: 1.0, g: 0.0, b: 0.7 },   // holoBoard: magenta
+  { r: 0.6, g: 0.0, b: 1.0 },   // synthLab: purple
+  { r: 0.2, g: 0.5, b: 1.0 },   // skyTower: blue
+  { r: 1.0, g: 0.9, b: 0.0 },   // aiCore: yellow
+  { r: 1.0, g: 0.15, b: 0.15 }, // orbitalLink: red
 ];
 
-function generateBuilding(cfg) {
-  const relW = rngRange(0.04, 0.10);
+function generateBgBuilding(cfg) {
+  const relW = rngRange(0.03, 0.09);
   const relH = rngRange(cfg.hMin, cfg.hMax);
-  const x = rngRange(-0.02, 1.02 - relW);
-  const hasAntenna = rng() > 0.5;
-  const antennaH = hasAntenna ? rngRange(0.02, 0.05) : 0;
-  const neonSide = rng() > 0.5 ? 'left' : 'right';
-  const neonHue = rng();
+  const x = rngRange(0.0, 1.0 - relW);
   const flickerSeed = rng() * 100;
+  const hasAntenna = rng() > 0.5;
+  const antennaH = hasAntenna ? rngRange(0.01, 0.04) : 0;
 
   const windows = [];
-  const winCols = Math.max(2, Math.floor(relW * 800 / 6));
-  const winRows = Math.max(3, Math.floor(relH * 800 / 8));
+  const winCols = Math.max(2, Math.floor(relW * 200));
+  const winRows = Math.max(3, Math.floor(relH * 80));
   for (let wy = 0; wy < winRows; wy++) {
     for (let wx = 0; wx < winCols; wx++) {
       if (rng() < cfg.winChance) {
-        windows.push({ cx: wx / winCols, cy: wy / winRows, hue: rng(), flickerSeed: rng() * 100, flickerSpeed: rngRange(0.15, 1.5) });
+        windows.push({ cx: wx / winCols, cy: wy / winRows, hue: rng(), seed: rng() * 100, spd: rngRange(0.2, 2.0) });
       }
     }
   }
-
-  return { x, relW, relH, hasAntenna, antennaH, windows, neonSide, neonHue, flickerSeed };
+  return { x, relW, relH, flickerSeed, hasAntenna, antennaH, windows };
 }
 
 export function generateSkyline(newSeed) {
   seed = newSeed || 42;
   layers.length = 0;
-  for (let li = 0; li < LAYER_CONFIGS.length; li++) {
-    const cfg = LAYER_CONFIGS[li];
+  for (const cfg of LAYER_CONFIGS) {
     const buildings = [];
-    for (let i = 0; i < cfg.count; i++) {
-      buildings.push(generateBuilding(cfg));
-    }
+    for (let i = 0; i < cfg.count; i++) buildings.push(generateBgBuilding(cfg));
     buildings.sort((a, b) => a.x - b.x);
     layers.push({ cfg, buildings });
   }
 }
 
-// Rebuild cache when building counts change
+// Rebuild purchased building visuals when counts change
 function rebuildPurchasedBuildings() {
   let hash = '';
-  for (const id of BUILDING_ORDER) {
-    hash += (state.buildings[id] || 0) + ',';
-  }
+  for (const id of BUILDING_ORDER) hash += (state.buildings[id] || 0) + ',';
   if (hash === lastBuildingHash) return;
   lastBuildingHash = hash;
 
   purchasedBuildingCache = [];
   seed = 9999;
-
   let slot = 0;
-  const totalSlots = getOwnedBuildingCount();
+  const total = getOwnedBuildingCount();
 
   for (let ti = 0; ti < BUILDING_ORDER.length; ti++) {
     const id = BUILDING_ORDER[ti];
     const count = state.buildings[id] || 0;
-    if (count === 0) continue;
+    if (!count) continue;
 
     for (let i = 0; i < count; i++) {
-      // Size scales with tier
-      const relW = 0.04 + ti * 0.008 + rngRange(-0.005, 0.005);
-      const relH = 0.10 + ti * 0.05 + rngRange(-0.015, 0.02);
-      // Evenly spread across screen
-      const x = 0.02 + (slot / Math.max(1, totalSlots + 1)) * 0.92 + rngRange(-0.01, 0.01);
+      const relW = 0.035 + ti * 0.007 + rngRange(-0.004, 0.004);
+      const relH = 0.15 + ti * 0.07 + rngRange(-0.02, 0.03);
+      const x = 0.01 + (slot / Math.max(1, total + 1)) * 0.94 + rngRange(-0.008, 0.008);
 
-      // Windows
       const windows = [];
-      const winCols = Math.max(2, Math.floor(relW * 120));
-      const winRows = Math.max(3, Math.floor(relH * 50));
-      for (let wy = 0; wy < winRows; wy++) {
-        for (let wx = 0; wx < winCols; wx++) {
-          if (rng() < 0.5) {
-            windows.push({ cx: wx / winCols, cy: wy / winRows, flickerSeed: rng() * 100, flickerSpeed: rngRange(0.2, 1.5) });
-          }
+      const wc = Math.max(2, Math.floor(relW * 150));
+      const wr = Math.max(4, Math.floor(relH * 60));
+      for (let wy = 0; wy < wr; wy++) {
+        for (let wx = 0; wx < wc; wx++) {
+          if (rng() < 0.45) windows.push({ cx: wx / wc, cy: wy / wr, seed: rng() * 100, spd: rngRange(0.2, 1.5) });
         }
       }
 
       purchasedBuildingCache.push({
         x, relW, relH, tierIdx: ti, windows,
-        hasAntenna: rng() > 0.4,
-        antennaH: rngRange(0.015, 0.04),
+        hasAntenna: rng() > 0.35,
+        antennaH: rngRange(0.02, 0.05),
         flickerSeed: rng() * 100,
+        hasTower: rng() > 0.5,
+        towerW: relW * rngRange(0.3, 0.5),
+        towerH: rngRange(0.03, 0.07),
       });
       slot++;
     }
   }
-
   purchasedBuildingCache.sort((a, b) => a.x - b.x);
 }
 
-// --- Main render ---
+// ============ MAIN RENDER ============
 export function renderSkyline(time, dt) {
   const w = width;
   const h = height;
   const hw = w / 2;
+  const gy = GROUND_Y * h;
 
-  // 1. Sky gradient
-  renderSkyGradient(w, h, hw);
+  // 1. Sky
+  renderSky(w, h, hw, time);
 
-  // 2. Background layers (distant buildings)
+  // 2. Background city layers (back to front)
   for (let li = 0; li < layers.length; li++) {
     const { cfg, buildings } = layers[li];
-    const tR = cfg.tint[0], tG = cfg.tint[1], tB = cfg.tint[2];
-    for (let bi = 0; bi < buildings.length; bi++) {
-      renderBgBuilding(buildings[bi], cfg.baseY, tR, tG, tB, time, w, h, hw);
+    const t = cfg.tint;
+    // Fog strip between layers for depth
+    if (li > 0) {
+      pushQuad(-hw, cfg.baseY * h - 2, w, 4, t[0] * 2, t[1] * 2, t[2] * 2, 0.15);
     }
-    // Horizon line per layer
-    pushQuad(-hw, cfg.baseY * h, w, 1, tR * 1.5, tG * 1.5, tB * 1.5, 0.3);
+    for (let bi = 0; bi < buildings.length; bi++) {
+      drawBgBuilding(buildings[bi], cfg, time, w, h, hw);
+    }
   }
 
-  // 3. Ground plane (BEFORE purchased buildings)
-  const groundY = h * 0.75;
-  pushQuad(-hw, groundY, w, h * 0.25, 0.03, 0.02, 0.08, 1.0);
+  // 3. Ground plane
+  pushQuad(-hw, gy, w, h - gy, 0.025, 0.02, 0.06, 1.0);
+  // Horizon glow
+  pushQuad(-hw, gy - 2, w, 4, 0.35, 0.15, 0.65, 0.6);
+  pushQuad(-hw, gy - 1, w, 2, 0.5, 0.25, 0.9, 0.3);
 
-  // 4. Ground horizon glow line
-  pushQuad(-hw, groundY - 1, w, 3, 0.3, 0.15, 0.6, 0.7);
+  // 4. Ground reflections
+  drawGroundReflections(time, w, h, hw, gy);
 
-  // 5. Wet ground reflections
-  renderGroundReflections(time, w, h, hw);
-
-  // 6. PURCHASED BUILDINGS — rendered LAST (on top of ground)
+  // 5. PURCHASED BUILDINGS — on top of everything
   rebuildPurchasedBuildings();
-  renderPurchasedBuildings(time, w, h, hw);
+  drawPurchasedBuildings(time, w, h, hw, gy);
 
-  // 7. Rain (on top of everything)
+  // 6. Atmospheric haze overlays
+  drawAtmosphere(time, w, h, hw);
+
+  // 7. Rain
   renderRain(dt || 0.016, w, h, hw);
 }
 
-// --- Purchased building rendering (completely rewritten) ---
-function renderPurchasedBuildings(time, w, h, hw) {
-  const groundY = h * 0.75;
-
+// ============ PURCHASED BUILDINGS ============
+function drawPurchasedBuildings(time, w, h, hw, gy) {
   for (let i = 0; i < purchasedBuildingCache.length; i++) {
     const b = purchasedBuildingCache[i];
     const tc = TIER_COLORS[b.tierIdx] || TIER_COLORS[0];
@@ -177,162 +170,199 @@ function renderPurchasedBuildings(time, w, h, hw) {
     const bw = b.relW * w;
     const bh = b.relH * h;
     const bx = -hw + b.x * w;
-    const by = groundY - bh; // building rises up from ground
+    const by = gy - bh;
 
-    // Building body — vivid, clearly visible against dark background
-    const bodyR = tc.r * 0.5 + 0.15;
-    const bodyG = tc.g * 0.5 + 0.12;
-    const bodyB = tc.b * 0.5 + 0.18;
-    pushQuad(bx, by, bw, bh, bodyR, bodyG, bodyB, 1.0);
+    // === BUILDING BODY ===
+    // Use tier color at medium brightness - clearly visible
+    pushQuad(bx, by, bw, bh, tc.r * 0.35 + 0.12, tc.g * 0.35 + 0.10, tc.b * 0.35 + 0.14, 1.0);
 
-    // Left edge — full neon color
-    pushQuad(bx, by, 3, bh, tc.r, tc.g, tc.b, 0.7);
-    // Right edge — full neon color
-    pushQuad(bx + bw - 3, by, 3, bh, tc.r, tc.g, tc.b, 0.7);
+    // Lighter inner panel (makes building body more visible)
+    const inset = Math.max(2, bw * 0.08);
+    pushQuad(bx + inset, by + 4, bw - inset * 2, bh - 8, tc.r * 0.25 + 0.18, tc.g * 0.25 + 0.15, tc.b * 0.25 + 0.20, 0.6);
 
-    // Rooftop — bright neon line
-    pushQuad(bx - 2, by - 2, bw + 4, 5, tc.r, tc.g, tc.b, 1.0);
+    // === TOWER EXTENSION ===
+    if (b.hasTower) {
+      const tw = b.towerW * w;
+      const th = b.towerH * h;
+      const tx = bx + (bw - tw) * 0.5;
+      pushQuad(tx, by - th, tw, th, tc.r * 0.3 + 0.10, tc.g * 0.3 + 0.08, tc.b * 0.3 + 0.12, 1.0);
+      // Tower rooftop
+      pushQuad(tx - 1, by - th - 1, tw + 2, 3, tc.r, tc.g, tc.b, 0.8);
+    }
 
-    // Rooftop glow (wider, faded)
-    pushQuad(bx - 8, by - 8, bw + 16, 10, tc.r, tc.g, tc.b, 0.3);
+    // === BRIGHT NEON EDGES ===
+    // Left edge
+    pushQuad(bx, by, 3, bh, tc.r, tc.g, tc.b, 0.8);
+    // Right edge
+    pushQuad(bx + bw - 3, by, 3, bh, tc.r, tc.g, tc.b, 0.8);
+    // Rooftop — BRIGHT neon bar
+    pushQuad(bx - 3, by - 3, bw + 6, 6, tc.r, tc.g, tc.b, 1.0);
+    // Rooftop glow halo
+    pushQuad(bx - 10, by - 10, bw + 20, 12, tc.r, tc.g, tc.b, 0.2);
+    // Base neon bar
+    pushQuad(bx - 4, gy - 3, bw + 8, 6, tc.r, tc.g, tc.b, 0.6);
 
-    // Base glow at ground level
-    pushQuad(bx - 6, groundY - 4, bw + 12, 8, tc.r, tc.g, tc.b, 0.5);
-
-    // Antenna with blinking light
+    // === ANTENNA ===
     if (b.hasAntenna) {
       const ax = bx + bw * 0.5 - 1;
       const ah = b.antennaH * h;
-      pushQuad(ax, by - ah, 2, ah, 0.4, 0.4, 0.6, 0.9);
-      const blink = Math.sin(time * 3.0 + b.flickerSeed) > 0.5;
-      if (blink) {
-        pushQuad(ax - 2, by - ah - 4, 6, 6, 1.0, 0.1, 0.2, 1.0);
+      pushQuad(ax, by - ah - (b.hasTower ? b.towerH * h : 0), 2, ah, 0.4, 0.35, 0.6, 0.9);
+      const topY = by - ah - (b.hasTower ? b.towerH * h : 0);
+      if (Math.sin(time * 3.0 + b.flickerSeed) > 0.4) {
+        pushQuad(ax - 3, topY - 5, 8, 8, 1.0, 0.1, 0.15, 1.0);
+        pushQuad(ax - 6, topY - 8, 14, 14, 1.0, 0.1, 0.15, 0.15); // glow
       }
     }
 
-    // Windows — bright colored squares
+    // === WINDOWS ===
     const wins = b.windows;
-    const padX = bw * 0.12;
-    const padY = bh * 0.08;
+    const padX = bw * 0.14;
+    const padY = bh * 0.06;
     const innerW = bw - padX * 2;
     const innerH = bh - padY * 2;
-    const winW = Math.max(3, bw * 0.08);
-    const winH = Math.max(3, bh * 0.04);
+    const winW = Math.max(3, bw * 0.07);
+    const winH = Math.max(2, bh * 0.03);
 
     for (let wi = 0; wi < wins.length; wi++) {
       const win = wins[wi];
       const wx = bx + padX + win.cx * (innerW - winW);
       const wy = by + padY + win.cy * (innerH - winH);
-
-      const flicker = Math.sin(time * win.flickerSpeed + win.flickerSeed);
-      if (flicker < -0.4) continue; // window off
-
-      const bright = 0.7 + flicker * 0.3;
-      // Use the tier color for windows, with brightness variation
-      pushQuad(wx, wy, winW, winH, tc.r * bright, tc.g * bright, tc.b * bright, 0.9);
+      const f = Math.sin(time * win.spd + win.seed);
+      if (f < -0.4) continue;
+      const br = 0.7 + f * 0.3;
+      pushQuad(wx, wy, winW, winH, tc.r * br, tc.g * br, tc.b * br, 0.9);
     }
 
-    // Vertical neon stripe on one side
-    const stripeW = Math.max(4, bw * 0.07);
-    const stripeX = (i % 2 === 0) ? bx + 4 : bx + bw - stripeW - 4;
-    const stripeAlpha = 0.6 + Math.sin(time * 0.6 + i * 2.0) * 0.2;
-    pushQuad(stripeX, by + bh * 0.05, stripeW, bh * 0.9, tc.r, tc.g, tc.b, stripeAlpha);
+    // === VERTICAL NEON STRIPE ===
+    const sw = Math.max(3, bw * 0.06);
+    const sx = (i % 2 === 0) ? bx + inset : bx + bw - inset - sw;
+    const sa = 0.5 + Math.sin(time * 0.7 + i * 2.0) * 0.2;
+    pushQuad(sx, by + bh * 0.1, sw, bh * 0.8, tc.r, tc.g, tc.b, sa);
+
+    // === HOLOGRAPHIC SIGN (on larger buildings) ===
+    if (b.tierIdx >= 2 && bw > 30) {
+      const signW = bw * 0.6;
+      const signH = Math.max(8, bh * 0.06);
+      const signX = bx + (bw - signW) * 0.5;
+      const signY = by + bh * 0.3;
+      const signA = 0.4 + Math.sin(time * 0.4 + b.flickerSeed) * 0.15;
+      pushQuad(signX, signY, signW, signH, tc.r, tc.g, tc.b, signA);
+      pushQuad(signX - 2, signY - 2, signW + 4, signH + 4, tc.r, tc.g, tc.b, signA * 0.3);
+    }
   }
 }
 
-// --- Background buildings (simplified) ---
-function renderBgBuilding(b, baseY, tR, tG, tB, time, w, h, hw) {
+// ============ BACKGROUND BUILDINGS ============
+function drawBgBuilding(b, cfg, time, w, h, hw) {
+  const t = cfg.tint;
   const bx = -hw + b.x * w;
   const bw = b.relW * w;
   const bh = b.relH * h;
-  const by = baseY * h - bh;
+  const by = cfg.baseY * h - bh;
 
   // Body
-  pushQuad(bx, by, bw, bh, tR, tG, tB, 1.0);
+  pushQuad(bx, by, bw, bh, t[0], t[1], t[2], 1.0);
 
-  // Rooftop edge
-  pushQuad(bx, by, bw, 2, tR * 2.0, tG * 2.0, tB * 2.0, 0.6);
+  // Rooftop line
+  pushQuad(bx, by, bw, 2, t[0] * 2.5, t[1] * 2.5, t[2] * 2.5, 0.5);
 
-  // Antenna
-  if (b.hasAntenna) {
+  // Antenna blink
+  if (b.hasAntenna && Math.sin(time * 2.5 + b.flickerSeed) > 0.6) {
     const ax = bx + bw * 0.45;
-    const ah = b.antennaH * h;
-    pushQuad(ax, by - ah, 2, ah, 0.15, 0.15, 0.30, 0.7);
-    if (Math.sin(time * 2.5 + b.flickerSeed) > 0.6) {
-      pushQuad(ax - 2, by - ah - 3, 6, 6, 1.0, 0.15, 0.2, 0.8);
-    }
+    pushQuad(ax - 2, by - b.antennaH * h - 3, 5, 5, 1.0, 0.15, 0.2, 0.7);
   }
 
   // Windows
   const wins = b.windows;
-  const winW = Math.max(3, bw * 0.08);
-  const winH = Math.max(3, bh * 0.03);
-  const padX = bw * 0.10;
-  const padY = bh * 0.06;
-  const innerW = bw - padX * 2;
-  const innerH = bh - padY * 2;
-
+  const winW = Math.max(2, bw * 0.07);
+  const winH = Math.max(2, bh * 0.025);
+  const pX = bw * 0.10;
+  const pY = bh * 0.06;
+  const iW = bw - pX * 2;
+  const iH = bh - pY * 2;
   for (let i = 0; i < wins.length; i++) {
     const win = wins[i];
-    const wx = bx + padX + win.cx * innerW;
-    const wy = by + padY + win.cy * innerH;
-    const flicker = Math.sin(time * win.flickerSpeed + win.flickerSeed);
-    if (flicker < -0.3) continue;
-    const bright = 0.5 + flicker * 0.5;
+    const f = Math.sin(time * win.spd + win.seed);
+    if (f < -0.3) continue;
+    const br = 0.4 + f * 0.6;
+    const wx = bx + pX + win.cx * iW;
+    const wy = by + pY + win.cy * iH;
     let wr, wg, wb;
-    if (win.hue < 0.3) { wr = 1.0 * bright; wg = 0.7 * bright; wb = 0.2 * bright; }
-    else if (win.hue < 0.6) { wr = 0.1 * bright; wg = 0.8 * bright; wb = 1.0 * bright; }
-    else { wr = 0.8 * bright; wg = 0.2 * bright; wb = 1.0 * bright; }
-    pushQuad(wx, wy, winW, winH, wr, wg, wb, 0.7);
+    if (win.hue < 0.3) { wr = 1.0; wg = 0.7; wb = 0.2; }
+    else if (win.hue < 0.6) { wr = 0.1; wg = 0.8; wb = 1.0; }
+    else { wr = 0.8; wg = 0.2; wb = 1.0; }
+    pushQuad(wx, wy, winW, winH, wr * br, wg * br, wb * br, 0.6);
   }
 }
 
-// --- Sky gradient ---
-function renderSkyGradient(w, h, hw) {
-  const bands = 12;
-  const bandH = h * 0.75 / bands;
+// ============ SKY ============
+function renderSky(w, h, hw, time) {
+  // Dark sky gradient (only upper portion)
+  const skyH = GROUND_Y * h;
+  const bands = 10;
+  const bandH = skyH / bands;
   for (let i = 0; i < bands; i++) {
     const t = i / (bands - 1);
-    const r = 0.02 + t * 0.06;
-    const g = 0.01 + t * 0.03;
-    const b = 0.06 + t * 0.10;
-    pushQuad(-hw, i * bandH, w, bandH + 1, r, g, b, 1.0);
+    pushQuad(-hw, i * bandH, w, bandH + 1, 0.01 + t * 0.05, 0.01 + t * 0.02, 0.04 + t * 0.10, 1.0);
   }
 }
 
-// --- Ground reflections ---
-function renderGroundReflections(time, w, h, hw) {
-  const groundY = h * 0.76;
-  const groundH = h * 0.23;
+// ============ ATMOSPHERE ============
+function drawAtmosphere(time, w, h, hw) {
+  // Horizontal haze layers for depth (between building rows)
+  for (let i = 0; i < 5; i++) {
+    const y = h * (0.45 + i * 0.08);
+    const a = 0.03 + Math.sin(time * 0.15 + i * 1.5) * 0.01;
+    pushQuad(-hw, y, w, 15, 0.06, 0.03, 0.15, a);
+  }
 
-  // Reflections from purchased buildings
+  // Neon ambient glow spots (floating city lights)
+  for (let i = 0; i < 20; i++) {
+    seed = 77777 + i;
+    const gx = -hw + rng() * w;
+    const gy = h * (0.3 + rng() * 0.55);
+    const gs = 4 + rng() * 12;
+    const ci = i % 5;
+    const cr = ci === 0 ? 1.0 : ci === 1 ? 0.0 : ci === 2 ? 1.0 : ci === 3 ? 0.0 : 0.8;
+    const cg = ci === 0 ? 0.0 : ci === 1 ? 1.0 : ci === 2 ? 0.0 : ci === 3 ? 0.6 : 0.2;
+    const cb = ci === 0 ? 0.8 : ci === 1 ? 0.7 : ci === 2 ? 1.0 : ci === 3 ? 1.0 : 1.0;
+    const pulse = 0.05 + Math.sin(time * 0.5 + i * 1.3) * 0.03;
+    pushQuad(gx, gy, gs, gs, cr, cg, cb, pulse);
+  }
+  seed = 42; // restore
+}
+
+// ============ GROUND REFLECTIONS ============
+function drawGroundReflections(time, w, h, hw, gy) {
+  const groundH = h - gy;
+
+  // Building reflections
   for (let i = 0; i < purchasedBuildingCache.length; i++) {
     const b = purchasedBuildingCache[i];
     const tc = TIER_COLORS[b.tierIdx] || TIER_COLORS[0];
     const bx = -hw + b.x * w;
     const bw = b.relW * w;
     const pulse = Math.sin(time * 0.5 + i * 2.1) * 0.5 + 0.5;
-    // Colored reflection streak
-    pushQuad(bx + bw * 0.2, groundY, bw * 0.6, groundH * 0.4, tc.r, tc.g, tc.b, 0.03 + pulse * 0.03);
+    pushQuad(bx + bw * 0.15, gy + 4, bw * 0.7, groundH * 0.5, tc.r, tc.g, tc.b, 0.04 + pulse * 0.03);
   }
 
-  // Ambient reflections
-  for (let i = 0; i < 15; i++) {
+  // Ambient wet ground streaks
+  for (let i = 0; i < 20; i++) {
     const px = ((i * 137.3 + 42.7) % 1.0);
-    const py = ((i * 91.1 + 17.3) % 0.6);
+    const py = ((i * 91.1 + 17.3) % 0.7);
     const pulse = Math.sin(time * 0.4 + i * 2.3) * 0.5 + 0.5;
     const rx = -hw + px * w;
-    const ry = groundY + py * groundH;
-    const rw = 20 + (i % 5) * 10;
-    const ci = i % 4;
-    const cr = ci === 0 ? 0.0 : ci === 1 ? 0.7 : ci === 2 ? 0.0 : 0.5;
-    const cg = ci === 0 ? 0.7 : ci === 1 ? 0.0 : ci === 2 ? 0.8 : 0.15;
-    const cb = ci === 0 ? 0.9 : ci === 1 ? 0.6 : ci === 2 ? 0.4 : 0.8;
-    pushQuad(rx, ry, rw, 2, cr, cg, cb, 0.06 + pulse * 0.05);
+    const ry = gy + 3 + py * groundH;
+    const rw = 15 + (i % 6) * 12;
+    const ci = i % 5;
+    const cr = ci < 2 ? 0.0 : ci < 4 ? 0.8 : 0.5;
+    const cg = ci < 2 ? 0.7 : ci < 3 ? 0.0 : 0.2;
+    const cb = ci < 2 ? 0.9 : ci < 4 ? 0.7 : 0.8;
+    pushQuad(rx, ry, rw, 2, cr, cg, cb, 0.05 + pulse * 0.04);
   }
 }
 
-// --- Rain ---
+// ============ RAIN ============
 const MAX_RAIN = 120;
 const rain = new Float32Array(MAX_RAIN * 4);
 let rainInited = false;
@@ -356,19 +386,13 @@ function renderRain(dt, w, h, hw) {
     rain[o] += rain[o + 2] * dt * 0.05;
     if (rain[o + 1] > 1.0) { rain[o + 1] = -0.05; rain[o] = Math.random(); }
     if (rain[o] > 1.05) rain[o] = -0.05;
-    const rx = -hw + rain[o] * w;
-    const ry = rain[o + 1] * h;
-    const rl = rain[o + 3];
-    const alpha = 0.04 + rain[o + 2] * 0.07;
-    pushQuad(rx, ry, 1, rl, 0.5, 0.55, 0.75, alpha);
+    pushQuad(-hw + rain[o] * w, rain[o + 1] * h, 1, rain[o + 3], 0.5, 0.55, 0.75, 0.04 + rain[o + 2] * 0.07);
   }
 }
 
 function getOwnedBuildingCount() {
   let count = 0;
-  for (const id of BUILDING_ORDER) {
-    count += state.buildings[id] || 0;
-  }
+  for (const id of BUILDING_ORDER) count += state.buildings[id] || 0;
   return count;
 }
 
