@@ -14,7 +14,7 @@ function update(dt) {
 
 function render(alpha, dt) {
   // --- WebGL scene ---
-  beginFrame();
+  beginFrame(state.totalTime);
   renderSkyline(state.totalTime);
   endFrame();
 

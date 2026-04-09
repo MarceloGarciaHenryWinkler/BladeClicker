@@ -1,9 +1,9 @@
 // glInit.js — WebGL context, buffers, batch renderer, camera
 import {
   QUAD_VERT, QUAD_FRAG,
-  POST_VERT, POST_FRAG,
   createProgram,
 } from './shaders.js';
+import { initPostFX, resizePostFX, runPostFX } from './postFX.js';
 
 // Max quads per draw call (6 verts each)
 const MAX_QUADS = 4096;
@@ -13,7 +13,6 @@ const BATCH_SIZE = MAX_QUADS * VERTS_PER_QUAD * FLOATS_PER_VERT;
 
 let gl = null;
 let quadProgram = null;
-let postProgram = null;
 let vbo = null;
 let batchBuf = new Float32Array(BATCH_SIZE);
 let batchOffset = 0;
@@ -29,11 +28,13 @@ export const camera = { x: 0, y: 0 };
 export let width = 0;
 export let height = 0;
 
-// Framebuffer for post-processing
+// Scene FBO (rendered into, then passed to postFX)
 let fbo = null;
 let fboTex = null;
-let postVBO = null;
-let uPostTex = null;
+let fsQuadVBO = null;
+
+// Time for post-processing (set each frame)
+let frameTime = 0;
 
 export function initGL(canvas) {
   gl = canvas.getContext('webgl', {
@@ -51,16 +52,15 @@ export function initGL(canvas) {
   // VBO for batched quads
   vbo = gl.createBuffer();
 
-  // --- Post-processing program ---
-  postProgram = createProgram(gl, POST_VERT, POST_FRAG);
-  uPostTex = gl.getUniformLocation(postProgram, 'u_tex');
-
-  // Fullscreen triangle-strip quad
-  postVBO = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, postVBO);
+  // Fullscreen quad VBO (shared by all post passes)
+  fsQuadVBO = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, fsQuadVBO);
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
     -1, -1, 1, -1, -1, 1, 1, 1,
   ]), gl.STATIC_DRAW);
+
+  // Init post-processing pipeline
+  initPostFX(gl, fsQuadVBO);
 
   // Enable blending
   gl.enable(gl.BLEND);
@@ -80,8 +80,9 @@ function handleResize(canvas) {
   canvas.width = Math.floor(width * dpr);
   canvas.height = Math.floor(height * dpr);
 
-  // Recreate FBO at new size
+  // Recreate FBOs at new size
   createFBO(canvas.width, canvas.height);
+  resizePostFX(canvas.width, canvas.height);
 }
 
 function createFBO(w, h) {
@@ -103,7 +104,8 @@ function createFBO(w, h) {
 }
 
 // --- Begin a frame: render to FBO ---
-export function beginFrame() {
+export function beginFrame(time) {
+  frameTime = time || 0;
   const canvas = gl.canvas;
   gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
   gl.viewport(0, 0, canvas.width, canvas.height);
@@ -155,25 +157,12 @@ export function flushQuads() {
   batchOffset = 0;
 }
 
-// --- End frame: blit FBO to screen via post shader ---
+// --- End frame: flush quads, run post-processing pipeline ---
 export function endFrame() {
   flushQuads();
 
-  // Blit to screen
-  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-  gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-
-  gl.useProgram(postProgram);
-  gl.activeTexture(gl.TEXTURE0);
-  gl.bindTexture(gl.TEXTURE_2D, fboTex);
-  gl.uniform1i(uPostTex, 0);
-
-  gl.bindBuffer(gl.ARRAY_BUFFER, postVBO);
-  const aPos = gl.getAttribLocation(postProgram, 'a_pos');
-  gl.enableVertexAttribArray(aPos);
-  gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
-
-  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  // Run bloom + composite → screen
+  runPostFX(fboTex, frameTime);
 }
 
 // --- Expose GL context for other modules ---
