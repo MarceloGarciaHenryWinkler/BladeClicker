@@ -96,31 +96,31 @@ void main() {
   vec3 bloom = texture2D(u_bloom, v_uv).rgb;
   vec3 col = scene + bloom * u_bloomStrength;
 
-  // Atmospheric fog (height-based, gentle near horizon only)
-  float fogT = smoothstep(0.55, 0.85, v_uv.y);
+  // Atmospheric fog (very gentle, horizon only)
+  float fogT = smoothstep(0.6, 0.9, v_uv.y);
   vec3 fogColor = vec3(0.06, 0.04, 0.14);
-  col = mix(col, fogColor, fogT * 0.2);
+  col = mix(col, fogColor, fogT * 0.1);
 
   // Upper sky haze (subtle animated)
   float haze = smoothstep(0.4, 0.0, v_uv.y);
   float hazeWave = sin(v_uv.x * 3.0 + u_time * 0.15) * 0.5 + 0.5;
   col += vec3(0.02, 0.01, 0.04) * haze * hazeWave;
 
-  // Vignette (gentle)
-  float vig = 1.0 - dist * 0.5;
+  // Vignette (very light)
+  float vig = 1.0 - dist * 0.25;
   vig = clamp(vig, 0.0, 1.0);
   col *= vig;
 
-  // Scanlines (very subtle)
-  float scan = sin(gl_FragCoord.y * 1.5) * 0.015 + 1.0;
+  // Scanlines (barely visible)
+  float scan = sin(gl_FragCoord.y * 1.5) * 0.008 + 1.0;
   col *= scan;
 
-  // Tone mapping (lifted Reinhard — preserves more brightness)
-  col = col / (col + 0.7) * 1.2;
+  // Tone mapping (gentle — preserves brightness)
+  col = col / (col + 0.9) * 1.15;
 
   // Slight color grading: push shadows blue, highlights warm
-  col.b += (1.0 - col.b) * 0.025;
-  col.r += col.r * 0.015;
+  col.b += (1.0 - col.b) * 0.02;
+  col.r += col.r * 0.01;
 
   gl_FragColor = vec4(col, 1.0);
 }
