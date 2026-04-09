@@ -13,10 +13,10 @@ function rngRange(min, max) { return min + rng() * (max - min); }
 
 // --- Parallax layers (back to front) ---
 const LAYER_CONFIGS = [
-  { depth: 0.05, count: 20, hMin: 0.15, hMax: 0.35, baseY: 0.65, tint: [0.18, 0.15, 0.38], winChance: 0.18 },
-  { depth: 0.15, count: 16, hMin: 0.18, hMax: 0.45, baseY: 0.68, tint: [0.24, 0.19, 0.48], winChance: 0.30 },
-  { depth: 0.35, count: 12, hMin: 0.15, hMax: 0.50, baseY: 0.72, tint: [0.32, 0.25, 0.58], winChance: 0.45 },
-  { depth: 1.00, count: 10, hMin: 0.10, hMax: 0.45, baseY: 0.75, tint: [0.40, 0.32, 0.68], winChance: 0.60 },
+  { depth: 0.05, count: 20, hMin: 0.15, hMax: 0.35, baseY: 0.65, tint: [0.20, 0.16, 0.40], winChance: 0.18 },
+  { depth: 0.15, count: 16, hMin: 0.18, hMax: 0.45, baseY: 0.68, tint: [0.28, 0.22, 0.52], winChance: 0.30 },
+  { depth: 0.35, count: 12, hMin: 0.15, hMax: 0.50, baseY: 0.72, tint: [0.38, 0.30, 0.65], winChance: 0.45 },
+  { depth: 1.00, count: 10, hMin: 0.10, hMax: 0.45, baseY: 0.75, tint: [0.50, 0.40, 0.80], winChance: 0.60 },
 ];
 
 // Pre-generated building data per layer
@@ -160,7 +160,7 @@ export function renderSkyline(time, dt) {
   for (let li = 0; li < layers.length; li++) {
     const { cfg, buildings } = layers[li];
     const tR = cfg.tint[0], tG = cfg.tint[1], tB = cfg.tint[2];
-    const fogMul = 0.4 + cfg.depth * 0.6;
+    const fogMul = 0.7 + cfg.depth * 0.3;
 
     for (let bi = 0; bi < buildings.length; bi++) {
       renderBuilding(buildings[bi], cfg.baseY, tR, tG, tB, fogMul, time, w, h, hw);
@@ -177,10 +177,10 @@ export function renderSkyline(time, dt) {
     for (let i = 0; i < purchasedBuildingCache.length; i++) {
       const b = purchasedBuildingCache[i];
       const tierT = b.tierIdx / 7;
-      // Very bright — player's buildings must stand out clearly
-      const tR = 0.55 + tierT * 0.25;
-      const tG = 0.40 + tierT * 0.20;
-      const tB = 0.70 + tierT * 0.25;
+      // Bright and vivid — player's buildings must clearly stand out
+      const tR = 0.70 + tierT * 0.20;
+      const tG = 0.50 + tierT * 0.25;
+      const tB = 0.85 + tierT * 0.15;
       renderBuilding(b, baseY, tR, tG, tB, 1.0, time, w, h, hw);
 
       // Extra glow bar at base for purchased buildings
@@ -195,10 +195,10 @@ export function renderSkyline(time, dt) {
   }
 
   // Foreground ground plane
-  pushQuad(-hw, h * 0.75, w, h * 0.25, 0.02, 0.02, 0.06, 1.0);
+  pushQuad(-hw, h * 0.75, w, h * 0.25, 0.04, 0.03, 0.10, 1.0);
 
-  // Ground reflection line
-  pushQuad(-hw, h * 0.75, w, 2, 0.15, 0.10, 0.30, 0.6);
+  // Ground reflection line (bright neon horizon)
+  pushQuad(-hw, h * 0.75, w, 2, 0.30, 0.20, 0.60, 0.8);
 
   // Wet ground reflections
   renderGroundReflections(time, w, h, hw);
