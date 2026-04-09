@@ -276,6 +276,79 @@
       50%  { opacity: 0.8; }
       100% { opacity: 0; transform: translateY(-60px) scale(0.7); }
     }
+
+    /* === Overlay (offline report) === */
+    .overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.75);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+
+    .overlay-box {
+      background: rgba(10,10,20,0.95);
+      border: 1px solid rgba(0,255,213,0.25);
+      border-radius: 6px;
+      padding: 28px 36px;
+      max-width: 360px;
+      text-align: center;
+    }
+
+    .overlay-title {
+      font-size: 12px;
+      letter-spacing: 3px;
+      color: #00ffd5;
+      margin-bottom: 16px;
+    }
+
+    .overlay-msg {
+      font-size: 13px;
+      color: #c0d0e0;
+      white-space: pre-wrap;
+      line-height: 1.6;
+      margin-bottom: 20px;
+      font-family: inherit;
+    }
+
+    .overlay-btn {
+      background: rgba(0,255,213,0.1);
+      border: 1px solid rgba(0,255,213,0.3);
+      color: #00ffd5;
+      font-family: inherit;
+      font-size: 11px;
+      letter-spacing: 2px;
+      padding: 8px 24px;
+      cursor: pointer;
+      border-radius: 3px;
+      transition: background 0.15s;
+    }
+    .overlay-btn:hover { background: rgba(0,255,213,0.2); }
+
+    /* === Toast === */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(60px);
+      background: rgba(10,10,20,0.9);
+      border: 1px solid rgba(0,255,213,0.2);
+      color: #00ffd5;
+      font-family: inherit;
+      font-size: 12px;
+      padding: 8px 20px;
+      border-radius: 4px;
+      opacity: 0;
+      transition: transform 0.3s ease, opacity 0.3s ease;
+      z-index: 90;
+      pointer-events: none;
+    }
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
   </style>
 </head>
 <body>
@@ -298,6 +371,8 @@
       <span class="val">0</span>
     </div>
     <span class="hud-clicks">Clicks: <span id="hudClicks">0</span></span>
+    <button id="saveBtn" class="hud-mute" title="Save game">SAVE</button>
+    <button id="resetBtn" class="hud-mute" title="Reset progress" style="color:#f06060;border-color:rgba(240,96,96,0.3)">RST</button>
     <button id="muteBtn" class="hud-mute" title="Toggle audio">SND</button>
   </div>
 
@@ -314,6 +389,18 @@
 
   <!-- Click Feedback Layer -->
   <div id="clickFeedback"></div>
+
+  <!-- Offline Report Overlay -->
+  <div id="offlineOverlay" class="overlay" style="display:none">
+    <div class="overlay-box">
+      <div class="overlay-title">OFFLINE REPORT</div>
+      <pre id="offlineMsg" class="overlay-msg"></pre>
+      <button id="offlineDismiss" class="overlay-btn">CONTINUE</button>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="toast"></div>
 
   <script type="module" src="src/main.js"></script>
 </body>

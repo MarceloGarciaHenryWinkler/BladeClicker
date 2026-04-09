@@ -4,6 +4,7 @@ import { formatNum } from '../economy.js';
 import { initPanels, updatePanels } from './panels.js';
 import { setMasterVolume } from '../audio/synth.js';
 import { stopAmbient, startAmbient, isAmbientPlaying } from '../audio/music.js';
+import { saveGame, deleteSave } from '../systems/saveLoad.js';
 
 let hudCredits, hudCps, hudEnergy, hudData, hudClicks;
 let clickFeedbackPool = [];
@@ -41,6 +42,21 @@ export function initUI() {
       stopAmbient();
     } else if (!isAmbientPlaying()) {
       startAmbient();
+    }
+  });
+
+  // Save button
+  document.getElementById('saveBtn').addEventListener('click', () => {
+    if (saveGame()) {
+      showToast('Game saved.');
+    }
+  });
+
+  // Reset button
+  document.getElementById('resetBtn').addEventListener('click', () => {
+    if (confirm('Wipe all progress? This cannot be undone.')) {
+      deleteSave();
+      location.reload();
     }
   });
 
@@ -90,4 +106,25 @@ function onCanvasClick(e) {
     fb.el.style.display = 'none';
     fb.el.classList.remove('animate');
   }, 800);
+}
+
+// --- Offline report modal ---
+export function showOfflineReport(text) {
+  const overlay = document.getElementById('offlineOverlay');
+  const msg = document.getElementById('offlineMsg');
+  msg.textContent = text;
+  overlay.style.display = 'flex';
+  document.getElementById('offlineDismiss').addEventListener('click', () => {
+    overlay.style.display = 'none';
+  }, { once: true });
+}
+
+// --- Toast notification ---
+function showToast(text) {
+  const el = document.getElementById('toast');
+  el.textContent = text;
+  el.classList.remove('show');
+  void el.offsetWidth;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2000);
 }
