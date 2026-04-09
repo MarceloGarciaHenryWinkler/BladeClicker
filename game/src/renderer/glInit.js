@@ -121,8 +121,8 @@ export function beginFrame(time) {
   gl.clear(gl.COLOR_BUFFER_BIT);
 
   gl.useProgram(quadProgram);
-  gl.uniform2f(uResolution, width / 2, height / 2);
-  gl.uniform2f(uCamera, camera.x, camera.y);
+  gl.uniform2f(uResolution, width, height);
+  gl.uniform2f(uCamera, camera.x, camera.y + height / 2);
 
   batchOffset = 0;
 }
