@@ -3,6 +3,7 @@ import { state } from '../state.js';
 import { getBuildingCost, buyBuilding, formatNum } from '../economy.js';
 import { BUILDINGS, BUILDING_ORDER } from '../systems/buildings.js';
 import { getAvailableUpgrades, buyUpgrade } from '../systems/upgrades.js';
+import { playBuy, playDeny } from '../audio/synth.js';
 
 let buildingListEl = null;
 let upgradeListEl = null;
@@ -84,7 +85,10 @@ function updateBuildings() {
 
     btn.addEventListener('click', () => {
       if (buyBuilding(id)) {
+        playBuy();
         lastBuildingHash = ''; // force refresh
+      } else {
+        playDeny();
       }
     });
     buildingListEl.appendChild(btn);
@@ -118,7 +122,10 @@ function updateUpgrades() {
 
     btn.addEventListener('click', () => {
       if (buyUpgrade(upg.id)) {
+        playBuy();
         lastUpgradeHash = '';
+      } else {
+        playDeny();
       }
     });
     upgradeListEl.appendChild(btn);

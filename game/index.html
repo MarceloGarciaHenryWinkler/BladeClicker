@@ -85,6 +85,22 @@
       color: #506070;
     }
 
+    .hud-mute {
+      background: rgba(0,255,213,0.08);
+      border: 1px solid rgba(0,255,213,0.2);
+      color: #00ffd5;
+      font-family: inherit;
+      font-size: 9px;
+      letter-spacing: 1px;
+      padding: 4px 8px;
+      cursor: pointer;
+      border-radius: 3px;
+      pointer-events: all;
+      transition: background 0.15s;
+    }
+    .hud-mute:hover { background: rgba(0,255,213,0.15); }
+    .hud-mute.muted { color: #504050; border-color: rgba(80,64,80,0.3); }
+
     /* === Side Panel === */
     #sidePanel {
       position: absolute;
@@ -282,6 +298,7 @@
       <span class="val">0</span>
     </div>
     <span class="hud-clicks">Clicks: <span id="hudClicks">0</span></span>
+    <button id="muteBtn" class="hud-mute" title="Toggle audio">SND</button>
   </div>
 
   <!-- Side Panel -->

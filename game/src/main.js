@@ -5,12 +5,27 @@ import { doClick } from './economy.js';
 import { initGL, beginFrame, endFrame } from './renderer/glInit.js';
 import { renderSkyline } from './renderer/skyline.js';
 import { initUI, updateUI } from './ui/ui.js';
+import { initAudio, resumeAudio, playClick } from './audio/synth.js';
+import { startAmbient, updateAmbient } from './audio/music.js';
+
+let audioStarted = false;
+
+function ensureAudio() {
+  if (audioStarted) return;
+  audioStarted = true;
+  initAudio();
+  resumeAudio();
+  startAmbient();
+}
 
 function update(dt) {
   state.totalTime += dt;
   state.credits += state.creditsPerSec * dt;
   state.energy += state.energyPerSec * dt;
   state.data += state.dataPerSec * dt;
+
+  // Update ambient music (chord progression)
+  if (audioStarted) updateAmbient(dt);
 }
 
 function render(alpha, dt) {
@@ -24,6 +39,8 @@ function render(alpha, dt) {
 }
 
 function onClick() {
+  ensureAudio();
+  playClick();
   doClick();
 }
 
@@ -47,6 +64,10 @@ function boot() {
 
   // Init UI
   initUI();
+
+  // Start audio on any user interaction (needed for autoplay policy)
+  document.addEventListener('click', ensureAudio, { once: true });
+  document.addEventListener('keydown', ensureAudio, { once: true });
 
   console.log('BladeClicker booting...');
   startLoop(update, render);

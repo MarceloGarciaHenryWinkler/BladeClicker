@@ -2,6 +2,8 @@
 import { state } from '../state.js';
 import { formatNum } from '../economy.js';
 import { initPanels, updatePanels } from './panels.js';
+import { setMasterVolume } from '../audio/synth.js';
+import { stopAmbient, startAmbient, isAmbientPlaying } from '../audio/music.js';
 
 let hudCredits, hudCps, hudEnergy, hudData, hudClicks;
 let clickFeedbackPool = [];
@@ -26,6 +28,21 @@ export function initUI() {
 
   // Listen for clicks on canvas for feedback effect
   document.getElementById('gameCanvas').addEventListener('click', onCanvasClick);
+
+  // Mute toggle
+  const muteBtn = document.getElementById('muteBtn');
+  let muted = false;
+  muteBtn.addEventListener('click', () => {
+    muted = !muted;
+    muteBtn.classList.toggle('muted', muted);
+    muteBtn.textContent = muted ? 'MUTE' : 'SND';
+    setMasterVolume(muted ? 0 : 0.3);
+    if (muted) {
+      stopAmbient();
+    } else if (!isAmbientPlaying()) {
+      startAmbient();
+    }
+  });
 
   initPanels();
 }
