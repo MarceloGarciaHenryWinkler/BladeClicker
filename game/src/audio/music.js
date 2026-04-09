@@ -79,7 +79,9 @@ export function updateAmbient(dt) {
 }
 
 function transitionChord(chord) {
+  if (!isPlaying || pads.length === 0) return;
   const ctx = getCtx();
+  if (!ctx) return;
   const now = ctx.currentTime;
 
   for (let i = 0; i < pads.length && i < chord.length; i++) {

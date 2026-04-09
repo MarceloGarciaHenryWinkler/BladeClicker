@@ -84,7 +84,7 @@ export function generateSkyline(newSeed) {
 }
 
 // --- Render the skyline ---
-export function renderSkyline(time) {
+export function renderSkyline(time, dt) {
   const w = width;
   const h = height;
   const hw = w / 2;
@@ -162,8 +162,14 @@ export function renderSkyline(time) {
   // Ground reflection line
   pushQuad(-hw, h * 0.75, w, 1, 0.1, 0.08, 0.2, 0.5);
 
+  // Progress-based extra window lights
+  renderProgressLights(time, w, h, hw);
+
   // Wet ground reflections (faint mirrored glow spots)
   renderGroundReflections(time, w, h, hw);
+
+  // Rain
+  renderRain(dt || 0.016, w, h, hw);
 }
 
 function renderWindows(b, bx, by, bw, bh, time, fogMul) {
@@ -245,13 +251,92 @@ function renderGroundReflections(time, w, h, hw) {
   }
 }
 
-// --- Dynamically add buildings to front layer based on owned buildings ---
-export function getBuildingCount() {
+// --- Rain particles (pre-allocated, no GC) ---
+const MAX_RAIN = 120;
+const rain = new Float32Array(MAX_RAIN * 4); // x, y, speed, length per drop
+let rainInited = false;
+
+function initRain() {
+  for (let i = 0; i < MAX_RAIN; i++) {
+    const o = i * 4;
+    rain[o    ] = Math.random();          // x (0..1)
+    rain[o + 1] = Math.random();          // y (0..1)
+    rain[o + 2] = 0.3 + Math.random() * 0.7; // speed
+    rain[o + 3] = 8 + Math.random() * 20;    // length px
+  }
+  rainInited = true;
+}
+
+function renderRain(dt, w, h, hw) {
+  if (!rainInited) initRain();
+
+  for (let i = 0; i < MAX_RAIN; i++) {
+    const o = i * 4;
+
+    // Update position
+    rain[o + 1] += rain[o + 2] * dt * 0.8;
+    rain[o]     += rain[o + 2] * dt * 0.05; // slight wind
+
+    // Wrap
+    if (rain[o + 1] > 1.0) {
+      rain[o + 1] = -0.05;
+      rain[o] = Math.random();
+    }
+    if (rain[o] > 1.05) rain[o] = -0.05;
+
+    const rx = -hw + rain[o] * w;
+    const ry = rain[o + 1] * h;
+    const rl = rain[o + 3];
+
+    // Fade based on depth (speed = proxy for depth)
+    const alpha = 0.03 + rain[o + 2] * 0.06;
+
+    pushQuad(rx, ry, 1, rl, 0.4, 0.5, 0.7, alpha);
+  }
+}
+
+// --- Skyline density reacts to owned building count ---
+function getOwnedBuildingCount() {
   let count = 0;
   for (const id of BUILDING_ORDER) {
     count += state.buildings[id] || 0;
   }
   return count;
+}
+
+// Extra foreground window lights based on progress
+function renderProgressLights(time, w, h, hw) {
+  const count = getOwnedBuildingCount();
+  if (count === 0) return;
+
+  // More lights as player progresses (max 30 extra)
+  const extraLights = Math.min(30, Math.floor(count * 0.5));
+  const frontLayer = layers[layers.length - 1];
+  if (!frontLayer) return;
+
+  for (let i = 0; i < extraLights; i++) {
+    // Distribute across front-layer buildings
+    const bIdx = i % frontLayer.buildings.length;
+    const b = frontLayer.buildings[bIdx];
+    const bx = -hw + b.x * w;
+    const bw = b.relW * w;
+    const bh = b.relH * h;
+    const by = frontLayer.cfg.baseY * h - bh;
+
+    const wx = bx + (((i * 73 + 31) % 100) / 100) * bw * 0.8 + bw * 0.1;
+    const wy = by + (((i * 47 + 13) % 100) / 100) * bh * 0.8 + bh * 0.1;
+
+    const flicker = Math.sin(time * 1.5 + i * 4.7);
+    if (flicker < 0) continue;
+
+    const bright = 0.5 + flicker * 0.5;
+    const ci = i % 3;
+    const r = ci === 0 ? 0.9 * bright : ci === 1 ? 0.0 : 0.1;
+    const g = ci === 0 ? 0.3 * bright : ci === 1 ? 0.9 * bright : 0.7 * bright;
+    const bl = ci === 0 ? 0.1 : ci === 1 ? 0.8 * bright : 0.9 * bright;
+
+    pushQuad(wx, wy, 4, 5, r, g, bl, 0.6 * bright);
+  }
 }
 
 // Call on init

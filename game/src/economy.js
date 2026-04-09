@@ -7,7 +7,8 @@ export function getBuildingCost(buildingId) {
   const def = BUILDINGS[buildingId];
   if (!def) return Infinity;
   const owned = state.buildings[buildingId] || 0;
-  return Math.floor(def.baseCost * Math.pow(def.scaleFactor, owned));
+  const cost = Math.floor(def.baseCost * Math.pow(def.scaleFactor, owned));
+  return isFinite(cost) ? cost : Infinity;
 }
 
 // Purchase a building if affordable

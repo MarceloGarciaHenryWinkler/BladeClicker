@@ -5,10 +5,13 @@ import { initPanels, updatePanels } from './panels.js';
 import { setMasterVolume } from '../audio/synth.js';
 import { stopAmbient, startAmbient, isAmbientPlaying } from '../audio/music.js';
 import { saveGame, deleteSave } from '../systems/saveLoad.js';
+import { popNotification } from '../progression.js';
 
 let hudCredits, hudCps, hudEnergy, hudData, hudClicks;
+let hudEnergyVal, hudDataVal;
 let clickFeedbackPool = [];
 const MAX_FEEDBACKS = 8;
+let milestoneTimer = 0;
 
 export function initUI() {
   hudCredits = document.getElementById('hudCredits');
@@ -16,6 +19,8 @@ export function initUI() {
   hudEnergy = document.getElementById('hudEnergy');
   hudData = document.getElementById('hudData');
   hudClicks = document.getElementById('hudClicks');
+  hudEnergyVal = hudEnergy.querySelector('.val');
+  hudDataVal = hudData.querySelector('.val');
 
   // Click feedback pool (reusable floating text elements)
   const container = document.getElementById('clickFeedback');
@@ -72,13 +77,21 @@ export function updateUI() {
   hudData.style.display = state.dataUnlocked ? 'flex' : 'none';
 
   if (state.energyUnlocked) {
-    hudEnergy.querySelector('.val').textContent = formatNum(state.energy);
+    hudEnergyVal.textContent = formatNum(state.energy);
   }
   if (state.dataUnlocked) {
-    hudData.querySelector('.val').textContent = formatNum(state.data);
+    hudDataVal.textContent = formatNum(state.data);
   }
 
   hudClicks.textContent = state.totalClicks;
+
+  // Milestone notifications (check every ~0.5s to avoid spam)
+  milestoneTimer++;
+  if (milestoneTimer >= 30) { // ~0.5s at 60fps
+    milestoneTimer = 0;
+    const note = popNotification();
+    if (note) showMilestone(note);
+  }
 
   // Panels
   updatePanels();
@@ -127,4 +140,14 @@ function showToast(text) {
   void el.offsetWidth;
   el.classList.add('show');
   setTimeout(() => el.classList.remove('show'), 2000);
+}
+
+// --- Milestone notification ---
+function showMilestone(text) {
+  const el = document.getElementById('milestone');
+  el.textContent = text;
+  el.classList.remove('show');
+  void el.offsetWidth;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 3500);
 }

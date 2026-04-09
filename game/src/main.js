@@ -11,6 +11,7 @@ import {
   loadGame, initSaveSystem, updateAutoSave,
   getOfflineReport, formatOfflineReport,
 } from './systems/saveLoad.js';
+import { initProgression, updateProgression } from './progression.js';
 
 let audioStarted = false;
 
@@ -31,6 +32,9 @@ function update(dt) {
   // Update ambient music (chord progression)
   if (audioStarted) updateAmbient(dt);
 
+  // Milestones
+  updateProgression();
+
   // Auto-save
   updateAutoSave(dt);
 }
@@ -38,7 +42,7 @@ function update(dt) {
 function render(alpha, dt) {
   // --- WebGL scene ---
   beginFrame(state.totalTime);
-  renderSkyline(state.totalTime);
+  renderSkyline(state.totalTime, dt);
   endFrame();
 
   // --- DOM UI ---
@@ -72,6 +76,9 @@ function boot() {
   // Load saved game (before UI init so state is populated)
   const loaded = loadGame();
   if (loaded) console.log('Save loaded.');
+
+  // Init progression (after load, before UI)
+  initProgression();
 
   // Init UI
   initUI();

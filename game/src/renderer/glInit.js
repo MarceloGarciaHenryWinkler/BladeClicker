@@ -21,6 +21,10 @@ let batchOffset = 0;
 let uResolution = null;
 let uCamera = null;
 
+// Cached attribute locations
+let aQuadPos = -1;
+let aQuadCol = -1;
+
 // Camera
 export const camera = { x: 0, y: 0 };
 
@@ -51,6 +55,10 @@ export function initGL(canvas) {
 
   // VBO for batched quads
   vbo = gl.createBuffer();
+
+  // Cache attribute locations
+  aQuadPos = gl.getAttribLocation(quadProgram, 'a_pos');
+  aQuadCol = gl.getAttribLocation(quadProgram, 'a_color');
 
   // Fullscreen quad VBO (shared by all post passes)
   fsQuadVBO = gl.createBuffer();
@@ -142,16 +150,13 @@ export function flushQuads() {
   if (batchOffset === 0) return;
 
   gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
-  gl.bufferData(gl.ARRAY_BUFFER, batchBuf.subarray(0, batchOffset), gl.DYNAMIC_DRAW);
+  gl.bufferData(gl.ARRAY_BUFFER, batchBuf.subarray(0, batchOffset), gl.STREAM_DRAW);
 
   const stride = FLOATS_PER_VERT * 4;
-  const aPos = gl.getAttribLocation(quadProgram, 'a_pos');
-  const aCol = gl.getAttribLocation(quadProgram, 'a_color');
-
-  gl.enableVertexAttribArray(aPos);
-  gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, stride, 0);
-  gl.enableVertexAttribArray(aCol);
-  gl.vertexAttribPointer(aCol, 4, gl.FLOAT, false, stride, 8);
+  gl.enableVertexAttribArray(aQuadPos);
+  gl.vertexAttribPointer(aQuadPos, 2, gl.FLOAT, false, stride, 0);
+  gl.enableVertexAttribArray(aQuadCol);
+  gl.vertexAttribPointer(aQuadCol, 4, gl.FLOAT, false, stride, 8);
 
   gl.drawArrays(gl.TRIANGLES, 0, batchOffset / FLOATS_PER_VERT);
   batchOffset = 0;
