@@ -14,6 +14,7 @@
       overflow: hidden;
       width: 100vw;
       height: 100vh;
+      user-select: none;
     }
 
     #gameCanvas {
@@ -23,20 +24,280 @@
       cursor: crosshair;
     }
 
+    /* === HUD Bar (top) === */
     #hud {
       position: absolute;
-      top: 12px; left: 16px;
-      font-size: 14px;
-      color: #00ffd5;
-      text-shadow: 0 0 6px #00ffd580;
+      top: 0; left: 0; right: 0;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      gap: 20px;
+      background: linear-gradient(180deg, rgba(5,5,15,0.9) 0%, rgba(5,5,15,0.4) 100%);
+      border-bottom: 1px solid rgba(0,255,213,0.15);
+      z-index: 20;
       pointer-events: none;
-      z-index: 10;
+    }
+
+    .hud-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+    }
+
+    .hud-item .label {
+      color: #607088;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .hud-item .val {
+      color: #00ffd5;
+      text-shadow: 0 0 8px rgba(0,255,213,0.4);
+      font-size: 14px;
+    }
+
+    .hud-item.credits .val {
+      color: #00ffd5;
+      font-size: 16px;
+      font-weight: bold;
+    }
+
+    .hud-item.energy .val { color: #f0c040; text-shadow: 0 0 8px rgba(240,192,64,0.4); }
+    .hud-item.data .val { color: #c060ff; text-shadow: 0 0 8px rgba(192,96,255,0.4); }
+
+    .hud-rate {
+      font-size: 11px;
+      color: #40a090;
+    }
+
+    .hud-divider {
+      width: 1px;
+      height: 24px;
+      background: rgba(0,255,213,0.1);
+    }
+
+    .hud-clicks {
+      margin-left: auto;
+      font-size: 11px;
+      color: #506070;
+    }
+
+    /* === Side Panel === */
+    #sidePanel {
+      position: absolute;
+      top: 48px; right: 0; bottom: 0;
+      width: 280px;
+      background: rgba(8,8,18,0.92);
+      border-left: 1px solid rgba(0,255,213,0.12);
+      z-index: 15;
+      display: flex;
+      flex-direction: column;
+      transition: transform 0.3s ease;
+    }
+
+    #sidePanel.collapsed {
+      transform: translateX(280px);
+    }
+
+    #panelToggle {
+      position: absolute;
+      left: -32px;
+      top: 8px;
+      width: 32px;
+      height: 32px;
+      background: rgba(8,8,18,0.9);
+      border: 1px solid rgba(0,255,213,0.2);
+      border-right: none;
+      color: #00ffd5;
+      font-size: 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px 0 0 4px;
+    }
+    #panelToggle:hover { background: rgba(0,255,213,0.1); }
+
+    .panel-tabs {
+      display: flex;
+      border-bottom: 1px solid rgba(0,255,213,0.1);
+      flex-shrink: 0;
+    }
+
+    .panel-tab {
+      flex: 1;
+      padding: 10px 0;
+      text-align: center;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: #506070;
+      cursor: pointer;
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      transition: color 0.2s, border-color 0.2s;
+    }
+
+    .panel-tab:hover { color: #80a0b0; }
+    .panel-tab.active {
+      color: #00ffd5;
+      border-bottom-color: #00ffd5;
+    }
+
+    .panel-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+    }
+
+    .panel-list::-webkit-scrollbar { width: 4px; }
+    .panel-list::-webkit-scrollbar-track { background: transparent; }
+    .panel-list::-webkit-scrollbar-thumb { background: rgba(0,255,213,0.2); border-radius: 2px; }
+
+    /* === Building / Upgrade Buttons === */
+    .panel-btn {
+      display: block;
+      width: 100%;
+      padding: 10px 12px;
+      margin-bottom: 6px;
+      background: rgba(15,15,30,0.8);
+      border: 1px solid rgba(0,255,213,0.12);
+      border-radius: 4px;
+      cursor: pointer;
+      text-align: left;
+      color: #d0d8e0;
+      transition: border-color 0.15s, background 0.15s;
+      position: relative;
+    }
+
+    .panel-btn:hover {
+      border-color: rgba(0,255,213,0.35);
+      background: rgba(0,255,213,0.05);
+    }
+
+    .panel-btn:active {
+      background: rgba(0,255,213,0.12);
+    }
+
+    .panel-btn.disabled {
+      opacity: 0.45;
+      cursor: default;
+    }
+    .panel-btn.disabled:hover {
+      border-color: rgba(0,255,213,0.12);
+      background: rgba(15,15,30,0.8);
+    }
+
+    .btn-name {
+      display: block;
+      font-size: 13px;
+      color: #e0f0ff;
+      margin-bottom: 2px;
+    }
+
+    .btn-info {
+      display: block;
+      font-size: 10px;
+      color: #607080;
+      margin-bottom: 4px;
+    }
+
+    .btn-cost {
+      font-size: 12px;
+      color: #00ffd5;
+    }
+
+    .btn-owned {
+      position: absolute;
+      top: 10px;
+      right: 12px;
+      font-size: 18px;
+      color: rgba(0,255,213,0.5);
+      font-weight: bold;
+    }
+
+    .upgrade-btn .btn-name { color: #c080ff; }
+    .upgrade-btn .btn-cost { color: #c080ff; }
+    .upgrade-btn:hover { border-color: rgba(192,96,255,0.35); background: rgba(192,96,255,0.05); }
+
+    .panel-empty {
+      text-align: center;
+      padding: 24px;
+      color: #404858;
+      font-size: 12px;
+    }
+
+    /* === Click Feedback === */
+    #clickFeedback {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      pointer-events: none;
+      z-index: 25;
+    }
+
+    .click-float {
+      position: absolute;
+      font-size: 18px;
+      font-weight: bold;
+      color: #00ffd5;
+      text-shadow: 0 0 10px rgba(0,255,213,0.6), 0 0 20px rgba(0,255,213,0.3);
+      pointer-events: none;
+      opacity: 0;
+      transform: translateY(0);
+    }
+
+    .click-float.animate {
+      animation: floatUp 0.8s ease-out forwards;
+    }
+
+    @keyframes floatUp {
+      0%   { opacity: 1; transform: translateY(0) scale(1); }
+      50%  { opacity: 0.8; }
+      100% { opacity: 0; transform: translateY(-60px) scale(0.7); }
     }
   </style>
 </head>
 <body>
   <canvas id="gameCanvas"></canvas>
-  <div id="hud">Booting...</div>
+
+  <!-- HUD Bar -->
+  <div id="hud">
+    <div class="hud-item credits">
+      <span class="label">Credits</span>
+      <span class="val" id="hudCredits">0</span>
+      <span class="hud-rate" id="hudCps">0/s</span>
+    </div>
+    <div class="hud-divider"></div>
+    <div class="hud-item energy" id="hudEnergy" style="display:none">
+      <span class="label">Energy</span>
+      <span class="val">0</span>
+    </div>
+    <div class="hud-item data" id="hudData" style="display:none">
+      <span class="label">Data</span>
+      <span class="val">0</span>
+    </div>
+    <span class="hud-clicks">Clicks: <span id="hudClicks">0</span></span>
+  </div>
+
+  <!-- Side Panel -->
+  <div id="sidePanel">
+    <button id="panelToggle">&#9666;</button>
+    <div class="panel-tabs">
+      <button class="panel-tab active" id="tabBuildings">Buildings</button>
+      <button class="panel-tab" id="tabUpgrades">Upgrades</button>
+    </div>
+    <div class="panel-list" id="buildingList"></div>
+    <div class="panel-list" id="upgradeList" style="display:none"></div>
+  </div>
+
+  <!-- Click Feedback Layer -->
+  <div id="clickFeedback"></div>
+
   <script type="module" src="src/main.js"></script>
 </body>
 </html>

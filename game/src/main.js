@@ -1,9 +1,10 @@
 // main.js — Bootstrap
 import { state } from './state.js';
 import { startLoop } from './gameLoop.js';
-import { doClick, formatNum } from './economy.js';
+import { doClick } from './economy.js';
 import { initGL, beginFrame, endFrame } from './renderer/glInit.js';
 import { renderSkyline } from './renderer/skyline.js';
+import { initUI, updateUI } from './ui/ui.js';
 
 function update(dt) {
   state.totalTime += dt;
@@ -18,16 +19,8 @@ function render(alpha, dt) {
   renderSkyline(state.totalTime);
   endFrame();
 
-  // --- HUD (DOM) ---
-  const hud = document.getElementById('hud');
-  if (!hud) return;
-
-  let text = `Credits: ${formatNum(state.credits)}`;
-  text += ` (${formatNum(state.creditsPerSec)}/s)`;
-  if (state.energyUnlocked) text += ` | Energy: ${formatNum(state.energy)}`;
-  if (state.dataUnlocked) text += ` | Data: ${formatNum(state.data)}`;
-  text += ` | Clicks: ${state.totalClicks}`;
-  hud.textContent = text;
+  // --- DOM UI ---
+  updateUI();
 }
 
 function onClick() {
@@ -51,6 +44,9 @@ function boot() {
   }
 
   canvas.addEventListener('click', onClick);
+
+  // Init UI
+  initUI();
 
   console.log('BladeClicker booting...');
   startLoop(update, render);
