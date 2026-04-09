@@ -111,13 +111,13 @@ function createFBO(w, h) {
   gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 }
 
-// --- Begin a frame: render to FBO ---
+// --- Begin a frame: render directly to screen (bypass FBO) ---
 export function beginFrame(time) {
   frameTime = time || 0;
   const canvas = gl.canvas;
-  gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null); // DIRECT TO SCREEN
   gl.viewport(0, 0, canvas.width, canvas.height);
-  gl.clearColor(0.039, 0.039, 0.071, 1.0); // #0a0a12
+  gl.clearColor(0.02, 0.02, 0.05, 1.0);
   gl.clear(gl.COLOR_BUFFER_BIT);
 
   gl.useProgram(quadProgram);
@@ -162,12 +162,10 @@ export function flushQuads() {
   batchOffset = 0;
 }
 
-// --- End frame: flush quads, run post-processing pipeline ---
+// --- End frame: flush remaining quads (no post-processing) ---
 export function endFrame() {
   flushQuads();
-
-  // Run bloom + composite → screen
-  runPostFX(fboTex, frameTime);
+  // Post-processing bypassed — rendering directly to screen
 }
 
 // --- Expose GL context for other modules ---

@@ -152,6 +152,23 @@ export function renderSkyline(time, dt) {
 
   // 5. PURCHASED BUILDINGS — on top of everything
   rebuildPurchasedBuildings();
+
+  // DEBUG: log building count once per second
+  if (Math.floor(time) !== Math.floor(time - (dt || 0.016))) {
+    console.log('[SKYLINE] purchased cache:', purchasedBuildingCache.length, 'w:', w, 'h:', h, 'gy:', gy);
+    if (purchasedBuildingCache.length > 0) {
+      const b0 = purchasedBuildingCache[0];
+      const bx = -hw + b0.x * w;
+      const by = gy - b0.relH * h;
+      console.log('[SKYLINE] building 0: bx=', bx, 'by=', by, 'bw=', b0.relW * w, 'bh=', b0.relH * h);
+    }
+  }
+
+  // DEBUG: if we have purchased buildings, draw a BRIGHT WHITE rectangle as proof
+  if (purchasedBuildingCache.length > 0) {
+    pushQuad(-hw + 10, 10, 150, 40, 1.0, 1.0, 1.0, 1.0); // top-left white bar
+  }
+
   drawPurchasedBuildings(time, w, h, hw, gy);
 
   // 6. Atmospheric haze overlays
@@ -172,13 +189,8 @@ function drawPurchasedBuildings(time, w, h, hw, gy) {
     const bx = -hw + b.x * w;
     const by = gy - bh;
 
-    // === BUILDING BODY ===
-    // Use tier color at medium brightness - clearly visible
-    pushQuad(bx, by, bw, bh, tc.r * 0.35 + 0.12, tc.g * 0.35 + 0.10, tc.b * 0.35 + 0.14, 1.0);
-
-    // Lighter inner panel (makes building body more visible)
-    const inset = Math.max(2, bw * 0.08);
-    pushQuad(bx + inset, by + 4, bw - inset * 2, bh - 8, tc.r * 0.25 + 0.18, tc.g * 0.25 + 0.15, tc.b * 0.25 + 0.20, 0.6);
+    // === BUILDING BODY — FULL BRIGHTNESS ===
+    pushQuad(bx, by, bw, bh, tc.r * 0.7 + 0.2, tc.g * 0.7 + 0.15, tc.b * 0.7 + 0.2, 1.0);
 
     // === TOWER EXTENSION ===
     if (b.hasTower) {
