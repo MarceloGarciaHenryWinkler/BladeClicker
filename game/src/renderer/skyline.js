@@ -247,6 +247,7 @@ function drawPurchasedBuildings(time, w, h, hw, gy) {
 
     // === VERTICAL NEON STRIPE ===
     const sw = Math.max(3, bw * 0.06);
+    const inset = bw * 0.14;
     const sx = (i % 2 === 0) ? bx + inset : bx + bw - inset - sw;
     const sa = 0.5 + Math.sin(time * 0.7 + i * 2.0) * 0.2;
     pushQuad(sx, by + bh * 0.1, sw, bh * 0.8, tc.r, tc.g, tc.b, sa);
